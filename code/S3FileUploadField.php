@@ -1,13 +1,13 @@
 <?php
+
 /**
  * Extends the SilverStripe UploadField to allow it to upload file to an S3
  * Bucket instead of the local storage.
  *
- * @author Maxime Rainville <max@firebrand.nz>
+ * @author  Maxime Rainville <max@firebrand.nz>
  * @package s3fileupload
  */
-class S3FileUploadField extends UploadField
-{
+class S3FileUploadField extends UploadField {
 
     /**
      * We'll use a different template to render the buttons on the upload field
@@ -34,20 +34,17 @@ class S3FileUploadField extends UploadField
      */
     private static $allowed_actions = array(
         'upload',
-        /*'attach',
-        'handleItem',
-        'handleSelect',
-        'fileexists'*/
+        'attach'
     );
 
     /**
      * Override the standard UploadField constructor so we can set a few things.
-     * @param string $name
-     * @param string $title
+     *
+     * @param string  $name
+     * @param string  $title
      * @param SS_List $items
      */
-    public function __construct($name, $title = null, SS_List $items = null)
-    {
+    public function __construct($name, $title = null, SS_List $items = null) {
         parent::__construct($name, $title, $items);
 
         // Remove the parent's JS hook.
@@ -56,23 +53,21 @@ class S3FileUploadField extends UploadField
         // Add our own JS hook.
         $this->addExtraClass('s3-upload');
 
-        // Set a bigger initial limit for our uploads. Otherwise this will
-        // default to what's the Max File Size limit in our php.ini
+        // Set a bigger initial limit for our uploads. Otherwise this will default to what's the Max File Size limit in our php.ini
         $this->getValidator()->setAllowedMaxFileSize(File::ini2bytes('2G'));
     }
 
     /**
      * Return our field for display in SS template
+     *
      * @param array $properties
+     *
      * @return SS_viewable
      */
-    public function Field($properties = array())
-    {
+    public function Field($properties = array()) {
         // Highjack some values in the UploadField config
         $this->ufConfig['url'] = self::getBucketUrl();
-        $this->ufConfig['canAttachExisting'] = false;
         $this->ufConfig['urlFileExists'] = '';
-        $this->ufConfig['overwriteWarning'] = false;
         $this->ufConfig['overwriteWarning'] = false;
         $this->ufConfig['downloadTemplateName'] = 'ss-s3uploadfield-downloadtemplate';
 
@@ -87,54 +82,57 @@ class S3FileUploadField extends UploadField
         Requirements::javascript(S3_FILE_UPLOAD_DIR . '/js/S3UploadField_downloadtemplate.js');
         Requirements::javascript(S3_FILE_UPLOAD_DIR . '/js/S3UploadField.js');
 
-        // We want this loaded after the default CSS rules to make sure it
-        // overrides the parents
+        // We want this loaded after the default CSS rules to make sure it overrides the parents
         Requirements::css(S3_FILE_UPLOAD_DIR . '/css/S3UploadField.css');
 
         return $return;
     }
 
     /**
-     * Get the S3 bucket name where the file will be uplaoded.
+     * Get the S3 bucket name where the file will be uploaded.
+     *
+     * Returns the default bucket from the config if not explicitly defined.
+     *
      * @return string
      */
-    public function getBucket()
-    {
-        // If no bucket has been explicitly define, return the default
-        // S3File bucket
+    public function getBucket() {
         return ($this->bucket) ? $this->bucket : S3File::config()->Bucket;
     }
 
     /**
      * Explicitly define the bucket to which the file will be uploaded.
+     *
      * @param string $value
+     *
      * @return S3FileUploadField
      */
-    public function setBucket($value)
-    {
+    public function setBucket($value) {
         $this->bucket = $value;
+
         return $this;
     }
 
     /**
-     * Get the AWS Region where the bucket is lcoated
+     * Get the AWS Region where the bucket is located.
+     *
+     * Returns the default region from the config if not explicitly defined.
+     *
      * @return string
      */
-    public function getRegion()
-    {
-        // If no region has been explicitly define, return the default
-        // S3File region
+    public function getRegion() {
         return ($this->region) ? $this->region : S3File::config()->Region;
     }
 
     /**
      * Explicitly define the region in which the bucket is located
+     *
      * @param string $value
+     *
      * @return S3FileUploadField
      */
-    public function setRegion($value)
-    {
+    public function setRegion($value) {
         $this->region = $value;
+
         return $this;
     }
 
@@ -146,17 +144,17 @@ class S3FileUploadField extends UploadField
      * This function is based off an article by Edd Turtle
      *
      * @link https://www.designedbyaturtle.co.uk/2015/direct-upload-to-s3-using-aws-signature-v4-php/ Detailed explanation
+     *
      * @return array
      */
-    protected function getFormData()
-    {
+    protected function getFormData() {
 
         // Retrieve some basic information we'll be needing
         $bucket = $this->getBucket();
         $key = S3File::config()->AccessId;
         $secret = S3File::config()->Secret;
         $region = $this->getRegion();
-        $acl = 'private';
+        $acl = 'private'; // TODO make this maintainable
 
         // Set som defaults
         $algorithm = "AWS4-HMAC-SHA256";
@@ -164,7 +162,7 @@ class S3FileUploadField extends UploadField
         $date = gmdate('Ymd\THis\Z');
         $shortDate = gmdate('Ymd');
         $requestType = "aws4_request";
-        $expires = "" . 60*60; // This request will be valid for an hour
+        $expires = "" . 60 * 60; // This request will be valid for an hour
         $successStatus = '201';
 
         $scope = [
@@ -208,16 +206,17 @@ class S3FileUploadField extends UploadField
 
         // Get all our form data together
         $formData = array(
-            array( 'name' => 'key', 'value' => uniqid('', true)), // This will be the name of our file in the S3 bucket
-            array( 'name' => 'Content-Type', 'value' => ''),
-            array( 'name' => 'acl', 'value' => $acl),
-            array( 'name' => 'success_action_status', 'value' => $successStatus),
-            array( 'name' => 'policy', 'value' => $base64Policy),
-            array( 'name' => 'X-amz-algorithm', 'value' => $algorithm),
-            array( 'name' => 'X-amz-credential', 'value' => $credentials),
-            array( 'name' => 'X-amz-date', 'value' => $date),
-            array( 'name' => 'X-amz-expires', 'value' => $expires),
-            array( 'name' => 'X-amz-signature', 'value' => $signature),
+            // TODO allow setting a folder name/path to create nested directories
+            array('name' => 'key', 'value' => uniqid('', true)), // This will be the name of our file in the S3 bucket
+            array('name' => 'Content-Type', 'value' => ''),
+            array('name' => 'acl', 'value' => $acl),
+            array('name' => 'success_action_status', 'value' => $successStatus),
+            array('name' => 'policy', 'value' => $base64Policy),
+            array('name' => 'X-amz-algorithm', 'value' => $algorithm),
+            array('name' => 'X-amz-credential', 'value' => $credentials),
+            array('name' => 'X-amz-date', 'value' => $date),
+            array('name' => 'X-amz-expires', 'value' => $expires),
+            array('name' => 'X-amz-signature', 'value' => $signature),
         );
 
         return $formData;
@@ -225,14 +224,14 @@ class S3FileUploadField extends UploadField
 
     /**
      * Get the URL of our bucket based off the bucket name and its region.
+     *
      * @return string URL
      */
-    public function getBucketUrl()
-    {
+    public function getBucketUrl() {
         $region = $this->getRegion();
 
         // US general doesn't have its name in the bucket URL
-        if ($region  == 'us-east-1') {
+        if ($region == 'us-east-1') {
             $region = '';
         } else {
             $region = "-$region";
@@ -240,6 +239,36 @@ class S3FileUploadField extends UploadField
         $bucket = $this->getBucket();
 
         return "https://$bucket.s3$region.amazonaws.com/";
+    }
+
+    /**
+     * Safely encodes the File object with all standard fields required
+     * by the front end
+     *
+     * @param S3File $s3File
+     *
+     * @return array Array encoded list of file attributes
+     */
+    protected function encodeS3FileAttributes(S3File $s3File) {
+
+        // Collect all output data.
+        $s3File = $this->customiseS3File($s3File);
+
+        return array(
+            'etag'          => $s3File->ETag,
+            'id'            => $s3File->ID,
+            'key'           => $s3File->Key,
+            'last_modified' => $s3File->LastModified,
+            'location'      => $s3File->Location,
+            'name'          => $s3File->Name,
+            'size'          => $s3File->Size,
+            'type'          => $s3File->Type,
+            'fieldname'     => $this->getName(),
+            'buttons'       => (string)$s3File->renderWith($this->getTemplateFileButtons()),
+            'edit_url'      => $this->getItemHandler($s3File->ID)->EditLink(),
+            'thumbnail_url' => $s3File->Icon(),
+            'url'           => $s3File->Location,
+        );
     }
 
     /**
@@ -251,11 +280,12 @@ class S3FileUploadField extends UploadField
      * can be added to the Form to which our S3FileUploadField is attached.
      *
      * Most of this has been adapted from the uplaod action of the UploadField.
+     *
      * @param  SS_HTTPRequest $request
+     *
      * @return SS_HTTPResponse
      */
-    public function upload(SS_HTTPRequest $request)
-    {
+    public function upload(SS_HTTPRequest $request) {
         if ($this->isDisabled() || $this->isReadonly() || !$this->canUpload()) {
             return $this->httpError(403);
         }
@@ -283,18 +313,18 @@ class S3FileUploadField extends UploadField
 
         // Format response with json
         $response = new SS_HTTPResponse(Convert::raw2json(array(array(
-            'bucket' => $s3File->Bucket,
-            'etag' => $s3File->ETag,
-            'id' => $s3File->ID,
-            'key' => $s3File->Key,
+            'bucket'        => $s3File->Bucket,
+            'etag'          => $s3File->ETag,
+            'id'            => $s3File->ID,
+            'key'           => $s3File->Key,
             'last_modified' => $s3File->LastModified,
-            'location' => $s3File->Location,
-            'name' => $s3File->Name,
-            'size' => $s3File->Size,
-            'type' => $s3File->Type,
-            'fieldname' => $this->getName(),
-            'buttons' => (string)$s3File->renderWith($this->getTemplateFileButtons()),
-            'edit_url' => $this->getItemHandler($s3File->ID)->EditLink(),
+            'location'      => $s3File->Location,
+            'name'          => $s3File->Name,
+            'size'          => $s3File->Size,
+            'type'          => $s3File->Type,
+            'fieldname'     => $this->getName(),
+            'buttons'       => (string)$s3File->renderWith($this->getTemplateFileButtons()),
+            'edit_url'      => $this->getItemHandler($s3File->ID)->EditLink(),
             'thumbnail_url' => $s3File->Icon(),
         ))));
 
@@ -302,24 +332,142 @@ class S3FileUploadField extends UploadField
         if (!empty($return['error'])) {
             $response->setStatusCode(403);
         }
+
+        return $response;
+    }
+
+    public function attach(SS_HTTPRequest $request) {
+        if (!$request->isPOST()) return $this->httpError(403);
+        if (!$this->canAttachExisting()) return $this->httpError(403);
+
+        // Retrieve file attributes required by front end
+        $return = array();
+        $files = S3File::get()->byIDs($request->postVar('ids'));
+        foreach ($files as $file) {
+            $return[] = $this->encodeS3FileAttributes($file);
+        }
+        $response = new SS_HTTPResponse(Convert::raw2json($return));
+        $response->addHeader('Content-Type', 'application/json');
+
         return $response;
     }
 
     /**
      * @param int $itemID
+     *
      * @return S3FileUploadField_ItemHandler
      */
-    public function getItemHandler($itemID)
-    {
+    public function getItemHandler($itemID) {
         return S3FileUploadField_ItemHandler::create($this, $itemID);
     }
 
     /**
      * Gets the foreign class that needs to be created, or 'S3File' as default if there is no relationship, or it cannot be determined.
+     *
      * @param string $default
+     *
+     * @return string
      */
-    public function getRelationAutosetClass($default = 'S3File')
-    {
+    public function getRelationAutosetClass($default = 'S3File') {
         return parent::getRelationAutosetClass($default);
+    }
+
+    public function getCustomisedItems() {
+        $customised = new ArrayList();
+        foreach ($this->getItems() as $file) {
+            $customised->push($this->customiseS3File($file));
+        }
+
+        return $customised;
+    }
+
+    protected function customiseS3File(S3File $s3File) {
+        $s3File = $s3File->customise(array(
+            'UploadFieldThumbnailURL' => $s3File->Icon(),
+            'UploadFieldDeleteLink'   => $this->getItemHandler($s3File->ID)->DeleteLink(),
+            'UploadFieldEditLink'     => $this->getItemHandler($s3File->ID)->EditLink(),
+            'UploadField'             => $this
+        ));
+
+        // we do this in a second customise to have the access to the previous customisations
+        return $s3File->customise(array(
+            'UploadFieldFileButtons' => (string)$s3File->renderWith($this->getTemplateFileButtons())
+        ));
+    }
+
+    public function getS3FileEditFields(S3File $s3File) {
+
+        // Empty actions, generate default
+        if (empty($this->fileEditFields)) {
+            $fields = $s3File->getCMSFields();
+            // Only display main tab, to avoid overly complex interface
+            if ($fields->hasTabSet() && ($mainTab = $fields->findOrMakeTab('Root.Main'))) {
+                $fields = $mainTab->Fields();
+            }
+
+            return $fields;
+        }
+
+        // Fields instance
+        if ($this->fileEditFields instanceof FieldList) return $this->fileEditFields;
+
+        // Method to call on the given file
+        if ($s3File->hasMethod($this->fileEditFields)) {
+            return $s3File->{$this->fileEditFields}();
+        }
+
+        user_error("Invalid value for UploadField::fileEditFields", E_USER_ERROR);
+    }
+
+    /**
+     * FieldList $actions or string $name (of a method on File to provide a actions) for the EditForm
+     * @example 'getCMSActions'
+     *
+     * @param S3File $s3File File context to generate form actions for
+     *
+     * @return FieldList Field list containing FormAction
+     */
+    public function getS3FileEditActions(S3File $s3File) {
+
+        // Empty actions, generate default
+        if (empty($this->fileEditActions)) {
+            $actions = new FieldList($saveAction = new FormAction('doEdit', _t('UploadField.DOEDIT', 'Save')));
+            $saveAction->addExtraClass('ss-ui-action-constructive icon-accept');
+
+            return $actions;
+        }
+
+        // Actions instance
+        if ($this->fileEditActions instanceof FieldList) return $this->fileEditActions;
+
+        // Method to call on the given file
+        if ($s3File->hasMethod($this->fileEditActions)) {
+            return $s3File->{$this->fileEditActions}();
+        }
+
+        user_error("Invalid value for UploadField::fileEditActions", E_USER_ERROR);
+    }
+
+    /**
+     * Determines the validator to use for the edit form
+     * @example 'getCMSValidator'
+     *
+     * @param S3File $s3File File context to generate validator from
+     *
+     * @return Validator Validator object
+     */
+    public function getS3FileEditValidator(S3File $s3File) {
+        // Empty validator
+        if (empty($this->fileEditValidator)) return null;
+
+        // Validator instance
+        if ($this->fileEditValidator instanceof Validator) return $this->fileEditValidator;
+
+        // Method to call on the given file
+        if ($s3File->hasMethod($this->fileEditValidator)) {
+            return $s3File->{$this->fileEditValidator}();
+        }
+
+        user_error("Invalid value for UploadField::fileEditValidator", E_USER_ERROR);
     }
 }
