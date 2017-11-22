@@ -112,7 +112,8 @@ class Page extends SiteTree {
     public function getCMSFields() {
 		$fields = parent::getCMSFields();
 		
-		$s3field = S3FileUploadField::create('S3FileID', 'S3 File');
+		$fields->removeByName('S3FileID');
+		$s3field = S3FileUploadField::create('S3File', 'S3 File');
 		
 		$s3field
             ->setAllowedMaxFileNumber(1)
