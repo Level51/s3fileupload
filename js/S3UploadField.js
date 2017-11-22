@@ -89,6 +89,9 @@
 					{
 						formData: function(form) {
 							var data = config.FormData;
+							var filename = $(fileInput)[0].files[0].name;
+							var suffix = filename.split('.').reverse()[0];
+							data[0].value += '.' + suffix; // TODO: Ensure that the first entry is the "key" field
 							
 							return data;
 						},
