@@ -38,6 +38,12 @@ class S3FileUploadField extends UploadField {
     protected $acl = false;
 
     /**
+     * Prefix for the randomly generated filename.
+     * @var string|null
+     */
+    protected $filenamePrefix = null;
+
+    /**
      * Possible actions on this fields
      * @var array
      */
@@ -194,6 +200,28 @@ class S3FileUploadField extends UploadField {
     }
 
     /**
+     * Sets a prefix for the randomly generated filename.
+     *
+     * @param string $prefix
+     *
+     * @return $this
+     */
+    public function setFilenamePrefix($prefix) {
+        $this->filenamePrefix = trim($prefix);
+
+        return $this;
+    }
+
+    /**
+     * Returns only the prefix if given.
+     *
+     * @return bool|null
+     */
+    public function getFilenamePrefix() {
+        return $this->filenamePrefix !== null ? $this->filenamePrefix : false;
+    }
+
+    /**
      * Generate the Form Data that will be passed along our upload request to
      * AWS S3. This data will include signature based on our AccessID and
      * secret. This will confirm to AWS that this upload request is legit.
@@ -261,7 +289,9 @@ class S3FileUploadField extends UploadField {
         // Signature
         $signature = hash_hmac('sha256', $base64Policy, $signingKey);
 
-        $fileName = uniqid('', true);
+        $fileName = $this->getFilenamePrefix() ?: '';
+        $fileName .= uniqid('', true);
+
         $filePath = $this->getFolderName() ? $this->getFolderName() . $fileName : $fileName;
 
         // Get all our form data together
