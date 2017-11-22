@@ -94,6 +94,7 @@ S3File:
   Region: 'us-east-1'
   AccessId: 'YOUACCESSKEYID'
   Secret: 'YOURACCESSKEYSECRET'
+  ACL: 'private' // Optional name of the access control list, default is 'private'
 ```
 
 You don't have to provide the Bucket or Region in YML file if you don't want to. Those can be manually set on your S3FileUploadField.
@@ -105,27 +106,22 @@ You don't have to provide the Bucket or Region in YML file if you don't want to.
 class Page extends SiteTree {
 
 	private static $has_one = array(
-        'File' => 'S3File'
+        'S3File' => 'S3File'
 	);
 
     public function getCMSFields() {
 		$fields = parent::getCMSFields();
-
-		$s3Field = S3FileUploadField::create('File', 'S3 File')
-            ->setAllowedMaxFileNumber(1);
-
-        // You can omit the following 2 lines.
-        // It will fallback on the YML configuration.
-        $s3Field->setBucket('YourBucketName');
-        $s3Field->setRegion('us-east-1');
-
-		$fields->insertBefore(
-			S3FileUploadField::create('S3File', 'S3 File')
-				->setAllowedMaxFileNumber(1),
-			'Description'
-		);
-
-		$fields->addFieldToTab('Root.Main',$s3Field);
+		
+		$s3field = S3FileUploadField::create('S3FileID', 'S3 File');
+		
+		$s3field
+            ->setAllowedMaxFileNumber(1)
+            ->setBucket('YourBucketName')
+            ->setRegion('us-east-1')
+            ->setFolderName('my/directory')
+            ->setACL('private');
+		
+		$fields->addFieldToTab('Root.Main', $s3field);
 
 		return $fields;
 	}
