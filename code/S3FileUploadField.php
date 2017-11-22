@@ -23,10 +23,19 @@ class S3FileUploadField extends UploadField {
     protected $bucket = false;
 
     /**
-     * Name of the AWS region where the bucket is lcoated.
+     * Name of the AWS region where the bucket is located.
      * @var string
      */
     protected $region = false;
+
+    /**
+     * Name of access control list for the uploaded object.
+     *
+     * @see http://docs.aws.amazon.com/AmazonS3/latest/dev/acl-overview.html
+     *
+     * @var string
+     */
+    protected $acl = false;
 
     /**
      * Possible actions on this fields
@@ -137,6 +146,54 @@ class S3FileUploadField extends UploadField {
     }
 
     /**
+     * Get the name of access control list, either set specific for this field or the default one from the config is used.
+     *
+     * @return mixed|string
+     */
+    public function getACL() {
+        return ($this->acl) ? $this->acl : S3File::config()->ACL;
+    }
+
+    /**
+     * Explicitly define a access control list set for this object.
+     *
+     * @see access control list
+     *
+     * @param $value
+     *
+     * @return $this
+     */
+    public function setACL($value) {
+        $this->acl = $value;
+
+        return $this;
+    }
+
+    /**
+     * Sets the upload folder name.
+     *
+     * Can be a path, the folder structure will be created automatically.
+     *
+     * @param string $folderName
+     *
+     * @return FileField Self reference
+     */
+    public function setFolderName($folderName) {
+        $this->folderName = trim($folderName, DIRECTORY_SEPARATOR);
+
+        return $this;
+    }
+
+    /**
+     * Get the folder name if set, false otherwise
+     *
+     * @return string|bool
+     */
+    public function getFolderName() {
+        return $this->folderName ? $this->folderName . DIRECTORY_SEPARATOR : false;
+    }
+
+    /**
      * Generate the Form Data that will be passed along our upload request to
      * AWS S3. This data will include signature based on our AccessID and
      * secret. This will confirm to AWS that this upload request is legit.
@@ -154,7 +211,7 @@ class S3FileUploadField extends UploadField {
         $key = S3File::config()->AccessId;
         $secret = S3File::config()->Secret;
         $region = $this->getRegion();
-        $acl = 'private'; // TODO make this maintainable
+        $acl = $this->getACL();
 
         // Set som defaults
         $algorithm = "AWS4-HMAC-SHA256";
@@ -204,10 +261,12 @@ class S3FileUploadField extends UploadField {
         // Signature
         $signature = hash_hmac('sha256', $base64Policy, $signingKey);
 
+        $fileName = uniqid('', true);
+        $filePath = $this->getFolderName() ? $this->getFolderName() . $fileName : $fileName;
+
         // Get all our form data together
         $formData = array(
-            // TODO allow setting a folder name/path to create nested directories
-            array('name' => 'key', 'value' => uniqid('', true)), // This will be the name of our file in the S3 bucket
+            array('name' => 'key', 'value' => $filePath),
             array('name' => 'Content-Type', 'value' => ''),
             array('name' => 'acl', 'value' => $acl),
             array('name' => 'success_action_status', 'value' => $successStatus),
