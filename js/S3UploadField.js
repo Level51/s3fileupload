@@ -29,13 +29,11 @@
                         data: json,
                         success: function (json, status, xhr) {
                             data.result = json;
-                            console.dir(data.result);
                             doneHandler.call(that, e, data);
                         },
                     });
                     
                 } else {
-                    console.dir(data.result);
                     doneHandler.call(this, e, data);
                 }
             };
