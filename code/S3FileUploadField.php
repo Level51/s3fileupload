@@ -44,6 +44,12 @@ class S3FileUploadField extends UploadField {
     protected $filenamePrefix = null;
 
     /**
+     * Function to be invoked after upload was done
+     * @var func
+     */
+    protected $onAfterUploadCallback = null;
+
+    /**
      * Possible actions on this fields
      * @var array
      */
@@ -222,6 +228,19 @@ class S3FileUploadField extends UploadField {
     }
 
     /**
+     * Sets the OnAfterUploadCallback
+     *
+     * @param $func
+     *
+     * @return $this
+     */
+    public function setOnAfterUploadCallback($func) {
+        $this->onAfterUploadCallback = $func;
+
+        return $this;
+    }
+
+    /**
      * Generate the Form Data that will be passed along our upload request to
      * AWS S3. This data will include signature based on our AccessID and
      * secret. This will confirm to AWS that this upload request is legit.
@@ -368,7 +387,7 @@ class S3FileUploadField extends UploadField {
      * Will respond with an some JSON data about the new S3File DataObject so it
      * can be added to the Form to which our S3FileUploadField is attached.
      *
-     * Most of this has been adapted from the uplaod action of the UploadField.
+     * Most of this has been adapted from the upload action of the UploadField.
      *
      * @param  SS_HTTPRequest $request
      *
@@ -390,7 +409,6 @@ class S3FileUploadField extends UploadField {
         $postVars['LastModified'] = date("Y-m-d H:i:s", $postVars['LastModified']);
         $postVars['ETag'] = str_replace('"', '', $postVars['ETag']);
         $postVars['Region'] = $this->getRegion();
-
 
         // Create our S3File
         $s3File = new S3File($postVars);
@@ -421,6 +439,10 @@ class S3FileUploadField extends UploadField {
         if (!empty($return['error'])) {
             $response->setStatusCode(403);
         }
+
+        // Invoke callback if specified
+        if ($this->onAfterUploadCallback !== null)
+            ($this->onAfterUploadCallback)($s3File);
 
         return $response;
     }
