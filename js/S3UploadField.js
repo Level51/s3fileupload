@@ -87,23 +87,25 @@
                     {
                         formData: function (form) {
                             var data = config.FormData;
-                            
-                            // Get original file name
-                            var filename = $(fileInput)[0].files[0].name;
-                            
-                            // Get original suffix of file
-                            var suffix = filename.split('.').pop();
-                            
-                            // Lookup the bucket key field
-                            var keyIndex = data.findIndex(function (elem) {
-                                return elem['name'] == 'key';
-                            });
-                            
-                            // Check if the suffix was already appended
-                            if (!data[keyIndex]['value'].endsWith(suffix)) {
-                                
-                                // Append the original file suffix
-                                data[keyIndex]['value'] += '.' + suffix;
+
+                            if ($(fileInput)[0].files.length > 0) {
+                                // Get original file name
+                                var filename = $(fileInput)[0].files[0].name;
+
+                                // Get original suffix of file
+                                var suffix = filename.split('.').pop();
+
+                                // Lookup the bucket key field
+                                var keyIndex = data.findIndex(function (elem) {
+                                    return elem['name'] == 'key';
+                                });
+
+                                // Check if the suffix was already appended
+                                if (!data[keyIndex]['value'].endsWith(suffix)) {
+
+                                    // Append the original file suffix
+                                    data[keyIndex]['value'] += '.' + suffix;
+                                }
                             }
 
                             return data;
