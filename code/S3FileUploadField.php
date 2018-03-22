@@ -50,6 +50,12 @@ class S3FileUploadField extends UploadField {
     protected $onAfterUploadCallback = null;
 
     /**
+     * Rule string for a custom CMS Icon path
+     * @var string
+     */
+    protected $iconPathRule = null;
+
+    /**
      * Possible actions on this fields
      * @var array
      */
@@ -241,6 +247,38 @@ class S3FileUploadField extends UploadField {
     }
 
     /**
+     * Defines a custom CMS Icon path rule
+     * The rule may contain fields of S3File with $FieldName Syntax.
+     *
+     * @param $pathRule
+     *
+     * @return $this
+     */
+    public function setIconPath($pathRule) {
+        $this->iconPathRule = $pathRule;
+
+        return $this;
+    }
+
+    /**
+     * @param S3File $s3File
+     *
+     * @return mixed
+     */
+    protected function getFileIcon($s3File) {
+        if ($this->iconPathRule === null) {
+            return $s3File->Icon();
+        }
+
+        return preg_replace_callback(
+            '/\$([^\s]+)/m',
+            function($field) use ($s3File) {
+                return $s3File->{$field[1]};
+            },
+            $this->iconPathRule);
+    }
+
+    /**
      * Generate the Form Data that will be passed along our upload request to
      * AWS S3. This data will include signature based on our AccessID and
      * secret. This will confirm to AWS that this upload request is legit.
@@ -374,7 +412,7 @@ class S3FileUploadField extends UploadField {
             'fieldname'     => $this->getName(),
             'buttons'       => (string)$s3File->renderWith($this->getTemplateFileButtons()),
             'edit_url'      => $this->getItemHandler($s3File->ID)->EditLink(),
-            'thumbnail_url' => $s3File->Icon(),
+            'thumbnail_url' => $this->getFileIcon($s3File),
             'url'           => $s3File->Location,
         );
     }
@@ -432,7 +470,7 @@ class S3FileUploadField extends UploadField {
             'fieldname'     => $this->getName(),
             'buttons'       => (string)$s3File->renderWith($this->getTemplateFileButtons()),
             'edit_url'      => $this->getItemHandler($s3File->ID)->EditLink(),
-            'thumbnail_url' => $s3File->Icon(),
+            'thumbnail_url' => $this->getFileIcon($s3File),
         ))));
 
         $response->addHeader('Content-Type', 'application/json');
@@ -494,7 +532,7 @@ class S3FileUploadField extends UploadField {
 
     protected function customiseS3File(S3File $s3File) {
         $s3File = $s3File->customise(array(
-            'UploadFieldThumbnailURL' => $s3File->Icon(),
+            'UploadFieldThumbnailURL' => $this->getFileIcon($s3File),
             'UploadFieldDeleteLink'   => $this->getItemHandler($s3File->ID)->DeleteLink(),
             'UploadFieldEditLink'     => $this->getItemHandler($s3File->ID)->EditLink(),
             'UploadField'             => $this
