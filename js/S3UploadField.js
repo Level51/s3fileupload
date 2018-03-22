@@ -51,7 +51,8 @@
             onmatch: function () {
                 
                 if (this.is('.readonly,.disabled')) return;
-                
+
+                var that = this;
                 var fileInput = this.find('.ss-uploadfield-fromcomputer-fileinput');
                 var dropZone = this.find('.ss-uploadfield-dropzone');
                 var config = fileInput.data('config');
@@ -85,13 +86,16 @@
                 this.setConfig(config);
                 this.fileupload($.extend(true,
                     {
+                        change: function (e, data) {
+                            that.currFile = data.files[0];
+                        },
                         formData: function (form) {
                             var data = config.FormData;
 
-                            if ($(fileInput)[0].files.length > 0) {
-                                
+                            if (that.currFile) {
+
                                 // Get original file name
-                                var file = $(fileInput)[0].files[0];
+                                var file = that.currFile;
                                 var filename = file.name;
                                 var type = file.type;
 
