@@ -87,32 +87,35 @@
                     {
                         formData: function (form) {
                             var data = config.FormData;
-                            
-                            // Get original file name
-                            var file = $(fileInput)[0].files[0];
-                            var filename = file.name;
-                            var type = file.type;
-                            
-                            // Get original suffix of file
-                            var suffix = filename.split('.').pop();
-                            
-                            // Lookup the bucket key field
-                            var keyIndex = data.findIndex(function (elem) {
-                                return elem['name'] == 'key';
-                            });
-                            
-                            // Check if the suffix was already appended
-                            if (!data[keyIndex]['value'].endsWith(suffix)) {
+
+                            if ($(fileInput)[0].files.length > 0) {
                                 
-                                // Append the original file suffix
-                                data[keyIndex]['value'] += '.' + suffix;
+                                // Get original file name
+                                var file = $(fileInput)[0].files[0];
+                                var filename = file.name;
+                                var type = file.type;
+
+                                // Get original suffix of file
+                                var suffix = filename.split('.').pop();
+
+                                // Lookup the bucket key field
+                                var keyIndex = data.findIndex(function (elem) {
+                                    return elem['name'] == 'key';
+                                });
+
+                                // Check if the suffix was already appended
+                                if (!data[keyIndex]['value'].endsWith(suffix)) {
+
+                                    // Append the original file suffix
+                                    data[keyIndex]['value'] += '.' + suffix;
+                                }
+    
+                                // Add "Content-Type"
+                                var typeIndex = data.findIndex(function (elem) {
+                                    return elem['name'] == 'Content-Type';
+                                });
+                                data[typeIndex]['value'] = type;
                             }
-                            
-                            // Add "Content-Type"
-                            var typeIndex = data.findIndex(function (elem) {
-                                return elem['name'] == 'Content-Type';
-                            });
-                            data[typeIndex]['value'] = type;
 
                             return data;
                         },
