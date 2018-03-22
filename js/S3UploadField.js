@@ -89,7 +89,9 @@
                             var data = config.FormData;
                             
                             // Get original file name
-                            var filename = $(fileInput)[0].files[0].name;
+                            var file = $(fileInput)[0].files[0];
+                            var filename = file.name;
+                            var type = file.type;
                             
                             // Get original suffix of file
                             var suffix = filename.split('.').pop();
@@ -105,6 +107,12 @@
                                 // Append the original file suffix
                                 data[keyIndex]['value'] += '.' + suffix;
                             }
+                            
+                            // Add "Content-Type"
+                            var typeIndex = data.findIndex(function (elem) {
+                                return elem['name'] == 'Content-Type';
+                            });
+                            data[typeIndex]['value'] = type;
 
                             return data;
                         },
