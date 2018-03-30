@@ -102,6 +102,43 @@ class S3FileUploadField extends UploadField {
         $this->ufConfig['FormData'] = self::getFormData();
         $this->ufConfig['uploadCallbackUrl'] = $this->Link('upload');
 
+        // Validation: File extensions
+        if ($allowedExtensions = $this->getAllowedExtensions()) {
+            $this->ufConfig['errorMessages']['acceptFileTypes'] = _t(
+                'File.INVALIDEXTENSION',
+                '',
+                '',
+                array(
+                    'extensions' => implode(', ', $allowedExtensions)
+                )
+            );
+        }
+
+        // Validation: File size
+        if ($allowedMaxFileSize = $this->getValidator()->getAllowedMaxFileSize()) {
+            $this->ufConfig['errorMessages']['maxFileSize'] = _t(
+                'File.TOOLARGESHORT',
+                'File size exceeds {size}',
+                array('size' => File::format_size($allowedMaxFileSize))
+            );
+        }
+
+        // Validation: Number of files
+        if ($allowedMaxFileNumber = $this->getAllowedMaxFileNumber()) {
+            if($allowedMaxFileNumber > 1) {
+                $this->ufConfig['errorMessages']['maxNumberOfFiles'] = _t(
+                    'UploadField.MAXNUMBEROFFILESSHORT',
+                    'Can only upload {count} files',
+                    array('count' => $allowedMaxFileNumber)
+                );
+            } else {
+                $this->ufConfig['errorMessages']['maxNumberOfFiles'] = _t(
+                    'UploadField.MAXNUMBEROFFILESONE',
+                    'Can only upload one file'
+                );
+            }
+        }
+
         // Call the parent function but don't return it right away
         $return = parent::Field($properties);
 
