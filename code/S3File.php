@@ -141,11 +141,11 @@ class S3File extends DataObject
      * download the file without making the file public for everyone to see or
      * download.
      *
-     * The URL will be valid for only 60 minutes.
+     * @param int $expiresIn Minutes until link gets invalid.
      *
      * @return string URL to download file
      */
-    public function getTemporaryDownloadLink()
+    public function getTemporaryDownloadLink($expiresIn = 60)
     {
         if (!$this->ID) {
             return false;
@@ -158,7 +158,7 @@ class S3File extends DataObject
             'ResponseContentDisposition' => 'attachment; filename="'. $this->Name .'"'
         ]);
 
-        $request = $s3->createPresignedRequest($cmd, '+60 minutes');
+        $request = $s3->createPresignedRequest($cmd, "+$expiresIn minutes");
 
         return (string) $request->getUri();
     }
