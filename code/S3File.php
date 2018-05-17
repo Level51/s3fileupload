@@ -141,22 +141,29 @@ class S3File extends DataObject
      * download the file without making the file public for everyone to see or
      * download.
      *
-     * @param int $expiresIn Minutes until link gets invalid.
+     * @param int  $expiresIn Minutes until link gets invalid.
+     *
+     * @param bool $directDownload Whether to set the response-content-disposition type to "attachment" or not
+     *                             see https://docs.aws.amazon.com/AmazonS3/latest/API/RESTObjectGET.html#RESTObjectGET-requests-request-parameters
      *
      * @return string URL to download file
      */
-    public function getTemporaryDownloadLink($expiresIn = 60)
+    public function getTemporaryDownloadLink($expiresIn = 60, $directDownload = true)
     {
         if (!$this->ID) {
             return false;
         }
         $s3 = $this->getS3Client();
 
-        $cmd = $s3->getCommand('GetObject', [
+        $params = [
             'Bucket' => $this->Bucket,
-            'Key'    => $this->Key,
-            'ResponseContentDisposition' => 'attachment; filename="'. $this->Name .'"'
-        ]);
+            'Key'    => $this->Key
+        ];
+
+        if ($directDownload)
+            $params['ResponseContentDisposition'] = 'attachment; filename="'. $this->Name .'"';
+
+        $cmd = $s3->getCommand('GetObject', $params);
 
         $request = $s3->createPresignedRequest($cmd, "+$expiresIn minutes");
 
