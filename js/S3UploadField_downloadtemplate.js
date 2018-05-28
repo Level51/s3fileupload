@@ -27,7 +27,7 @@ window.tmpl.cache['ss-s3uploadfield-downloadtemplate'] = tmpl(`${'{% for (var i=
 					'{% if (!file.error) { %}' +
 						'<div class="ss-uploadfield-item-status ui-state-success-text" title="'}${ss.i18n._t('UploadField.Uploaded', 'Uploaded')}">${ss.i18n._t('UploadField.Uploaded', 'Uploaded')}</div>` +
 					'{% } else {  %}' +
-						'<div class="ss-uploadfield-item-status ui-state-error-text" title="{%=o.options.errorMessages[file.error] || file.error%}">{%=o.options.errorMessages[file.error] || file.error%} test</div>' +
+						'<div class="ss-uploadfield-item-status ui-state-error-text" title="{%=o.options.errorMessages[file.error] || file.error%}">{%=o.options.errorMessages[file.error] || file.error%}</div>' +
 					'{% } %}' +
 					'<div class="clear"><!-- --></div>' +
 				'</label>' +
