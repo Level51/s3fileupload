@@ -1,27 +1,28 @@
+/* eslint-disable */
 (function ($) {
     $.widget('firebrandS3.fileupload', $.blueimpUIX.fileupload, {
         _initTemplates: function () {
             // Intercept the done Call se we can convert the S3 XML data into somthing FileUploadUI will understand
             var doneHandler = this.options.done;
-            
+
             var config = this.options;
-            
+
             this.options.done = function (e, data) {
                 if (!$.isArray(data.result)) {
-                    
+
                     data.resultXml = data.result
                     var json = {};
                     $(data.result).find('PostResponse > *').each(function (i, e) {
                         json[e.tagName] = e.textContent;
                     });
-                    
+
                     var file = data.files[0];
                     json.LastModified = file.lastModified;
                     json.Name = file.name;
                     json.Size = file.size;
                     json.Type = file.type;
                     json.SecurityID = config.form.find(':input[name=SecurityID]').val();
-                    
+
                     var that = this;
                     $.ajax({
                         type: "POST",
@@ -32,7 +33,7 @@
                             doneHandler.call(that, e, data);
                         },
                     });
-                    
+
                 } else {
                     doneHandler.call(this, e, data);
                 }
@@ -40,23 +41,23 @@
             $.blueimpUIX.fileupload.prototype._initTemplates.call(this);
         }
     });
-    
-    
+
+
     $.entwine('ss', function ($) {
-        
+
         $('div.s3-upload').entwine({
-            
+
             Config: null,
-            
+
             onmatch: function () {
-                
+
                 if (this.is('.readonly,.disabled')) return;
 
                 var that = this;
                 var fileInput = this.find('.ss-uploadfield-fromcomputer-fileinput');
                 var dropZone = this.find('.ss-uploadfield-dropzone');
                 var config = fileInput.data('config');
-                
+
                 /* Attach classes to dropzone when element can be dropped*/
                 $(document).unbind('dragover');
                 $(document).bind('dragover', function (e) {
@@ -77,16 +78,19 @@
                         dropZone.removeClass('active hover');
                     }, 100);
                 });
-                
+
                 //disable default behaviour if file dropped in the wrong area
                 $(document).bind('drop dragover', function (e) {
                     e.preventDefault();
                 });
-                
+
                 this.setConfig(config);
                 this.fileupload($.extend(true,
                     {
                         change: function (e, data) {
+                            that.currFile = data.files[0];
+                        },
+                        drop: function(e, data) {
                             that.currFile = data.files[0];
                         },
                         formData: function (form) {
@@ -113,7 +117,7 @@
                                     // Append the original file suffix
                                     data[keyIndex]['value'] += '.' + suffix;
                                 }
-    
+
                                 // Add "Content-Type"
                                 var typeIndex = data.findIndex(function (elem) {
                                     return elem['name'] == 'Content-Type';
@@ -167,13 +171,13 @@
                         acceptFileTypes: new RegExp(config.acceptFileTypes, 'i')
                     }
                 ));
-                
+
                 if (this.data('fileupload')._isXHRUpload({multipart: true})) {
                     $('.ss-uploadfield-item-uploador').hide().show();
                     dropZone.hide().show();
                 }
-                
-                
+
+
                 this._super();
             },
             onunmatch: function () {
@@ -184,27 +188,27 @@
                 var self = this, config = this.getConfig(), dialogId = 'ss-uploadfield-dialog-' + this.attr('id'),
                     dialog = jQuery('#' + dialogId);
                 if (!dialog.length) dialog = jQuery('<div class="ss-uploadfield-dialog" id="' + dialogId + '" />');
-                
+
                 // If user selected 'Choose another file', we need the ID of the file to replace
                 var iframeUrl = config['urlSelectDialog'];
                 var uploadedFileId = null;
                 if (uploadedFile && uploadedFile.attr('data-fileid') > 0) {
                     uploadedFileId = uploadedFile.attr('data-fileid');
                 }
-                
+
                 // Show dialog
                 dialog.ssdialog({iframeUrl: iframeUrl, height: 550});
-                
+
                 // TODO Allow single-select
                 dialog.find('iframe').bind('load', function (e) {
                     var contents = $(this).contents(), gridField = contents.find('.ss-gridfield');
                     // TODO Fix jQuery custom event bubbling across iframes on same domain
                     // gridField.find('.ss-gridfield-items')).bind('selectablestop', function() {
                     // });
-                    
+
                     // Remove top margin (easier than including new selectors)
                     contents.find('table.ss-gridfield').css('margin-top', 0);
-                    
+
                     // Can't use live() in iframes...
                     contents.find('input[name=action_doAttach]').unbind('click.openSelectDialog').bind('click.openSelectDialog', function () {
                         // TODO Fix entwine method calls across iframe/document boundaries
@@ -212,7 +216,7 @@
                             return $(el).data('id');
                         });
                         if (ids && ids.length) self.attachFiles(ids, uploadedFileId);
-                        
+
                         dialog.ssdialog('close');
                         return false;
                     });
@@ -224,10 +228,10 @@
                     config = this.getConfig(),
                     indicator = $('<div class="loader" />'),
                     target = (uploadedFileId) ? this.find(".ss-uploadfield-item[data-fileid='" + uploadedFileId + "']") : this.find('.ss-uploadfield-addfile');
-                
+
                 target.children().hide();
                 target.append(indicator);
-                
+
                 $.ajax({
                     type: "POST",
                     url: config['urlAttach'],
@@ -248,7 +252,7 @@
         });
         $('div.s3-upload *').entwine({
             getUploadField: function () {
-                
+
                 return this.parents('div.s3-upload:first');
             }
         });
@@ -276,21 +280,21 @@
                 return false;
             }
         });
-        
-        
+
+
         $('div.s3-upload .ss-uploadfield-item-remove:not(.ui-state-disabled), .ss-uploadfield-item-delete:not(.ui-state-disabled)').entwine({
             onclick: function (e) {
                 var field = this.closest('div.s3-upload'),
                     config = field.getConfig('changeDetection'),
                     fileupload = field.data('fileupload'),
                     item = this.closest('.ss-uploadfield-item'), msg = '';
-                
+
                 if (this.is('.ss-uploadfield-item-delete')) {
                     if (confirm(ss.i18n._t('UploadField.ConfirmDelete'))) {
                         if (config.changeDetection) {
                             this.closest('form').trigger('dirty');
                         }
-                        
+
                         if (fileupload) {
                             fileupload._trigger('destroy', e, {
                                 context: item,
@@ -305,20 +309,20 @@
                     if (config.changeDetection) {
                         this.closest('form').trigger('dirty');
                     }
-                    
+
                     if (fileupload) {
                         fileupload._trigger('destroy', e, {context: item});
                     }
                 }
-                
+
                 e.preventDefault(); // Avoid a form submit
                 return false;
             }
         });
-        
+
         $('div.s3-upload .ss-uploadfield-item-edit-all').entwine({
             onclick: function (e) {
-                
+
                 if ($(this).hasClass('opened')) {
                     $('.ss-uploadfield-item .ss-uploadfield-item-edit .toggle-details-icon.opened').each(function (i) {
                         $(this).closest('.ss-uploadfield-item-edit').click();
@@ -332,7 +336,7 @@
                     });
                     $(this).addClass('opened').find('.toggle-details-icon').addClass('opened');
                 }
-                
+
                 e.preventDefault(); // Avoid a form submit
                 return false;
             }
@@ -343,27 +347,27 @@
                     editform = self.closest('.ss-uploadfield-item').find('.ss-uploadfield-item-editform'),
                     itemInfo = editform.prev('.ss-uploadfield-item-info'),
                     iframe = editform.find('iframe');
-                
+
                 // Ignore clicks while the iframe is loading
                 if (iframe.parent().hasClass('loading')) {
                     e.preventDefault();
                     return false;
                 }
-                
+
                 if (iframe.attr('src') == 'about:blank') {
                     // Lazy-load the iframe on editform toggle
                     iframe.attr('src', iframe.data('src'));
-                    
+
                     // Add loading class, disable buttons while loading is in progress
                     // (_prepareIframe() handles re-enabling them when appropriate)
                     iframe.parent().addClass('loading');
                     disabled = this.siblings();
                     disabled.addClass('ui-state-disabled');
                     disabled.attr('disabled', 'disabled');
-                    
+
                     iframe.on('load', function () {
                         iframe.parent().removeClass('loading');
-                        
+
                         // This ensures we only call _prepareIframe() on load once - otherwise it'll
                         // be superfluously called after clicking 'save' in the editform
                         if (iframe.data('src')) {
@@ -374,13 +378,13 @@
                 } else {
                     self._prepareIframe(iframe, editform, itemInfo);
                 }
-                
+
                 e.preventDefault(); // Avoid a form submit
                 return false;
             },
             _prepareIframe: function (iframe, editform, itemInfo) {
                 var disabled;
-                
+
                 // Mark the row as changed if any of its form fields are edited
                 iframe.contents().ready(function () {
                     // Need to use the iframe's own jQuery, as custom event triggers
@@ -391,7 +395,7 @@
                         editform.addClass('edited');
                     });
                 });
-                
+
                 if (editform.hasClass('loading')) {
                     // TODO Display loading indication, and register an event to toggle edit form
                 } else {
@@ -402,7 +406,7 @@
                     }
                     editform.parent('.ss-uploadfield-item').removeClass('ui-state-warning');
                     editform.toggleEditForm();
-                    
+
                     if (itemInfo.find('.toggle-details-icon').hasClass('opened')) {
                         disabled.addClass('ui-state-disabled');
                         disabled.attr('disabled', 'disabled');
@@ -413,8 +417,8 @@
                 }
             }
         });
-        
-        
+
+
         $('div.s3-upload .ss-uploadfield-item-editform').entwine({
             fitHeight: function () {
                 var iframe = this.find('iframe'),
@@ -422,12 +426,12 @@
                     bodyH = contents.find('form').outerHeight(true), // We set the height to match the form's outer height
                     iframeH = bodyH + (iframe.outerHeight(true) - iframe.height()), // content's height + padding on iframe elem
                     containerH = iframeH + (this.outerHeight(true) - this.height()); // iframe height + padding on container elem
-                
+
                 /* Set height of body except in IE8. Setting this in IE8 breaks the dropdown */
                 if (!$.browser.msie && $.browser.version.slice(0, 3) != "8.0") {
                     contents.find('body').css({'height': bodyH});
                 }
-                
+
                 iframe.height(iframeH);
                 this.animate({height: containerH}, 500);
             },
@@ -436,7 +440,7 @@
                     status = itemInfo.find('.ss-uploadfield-item-status');
                 var iframe = this.find('iframe').contents(), saved = iframe.find('#Form_EditForm_error');
                 var text = "";
-                
+
                 if (this.height() === 0) {
                     text = ss.i18n._t('UploadField.Editing', "Editing ...");
                     this.fitHeight();
@@ -449,7 +453,7 @@
                     if ($('div.s3-upload  .ss-uploadfield-files .ss-uploadfield-item-actions .toggle-details-icon:not(.opened)').index() < 0) {
                         $('div.s3-upload .ss-uploadfield-item-edit-all').addClass('opened').find('.toggle-details-icon').addClass('opened');
                     }
-                    
+
                 } else {
                     this.animate({height: 0}, 500);
                     this.removeClass('opened');
